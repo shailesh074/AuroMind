@@ -3,12 +3,12 @@ import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: "AIzaSyAGPg3EiEeeavS-xXoAZHYX0BCuPrGvBds",
+  authDomain: "auromind-57fbd.firebaseapp.com",
+  projectId: "auromind-57fbd",
+  storageBucket: "auromind-57fbd.firebasestorage.app",
+  messagingSenderId: "48388726906",
+  appId: "1:48388726906:web:3ee058e6a6287df7a01bc3"
 };
 
 const app = initializeApp(firebaseConfig);

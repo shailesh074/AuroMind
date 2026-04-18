@@ -36,7 +36,7 @@ export default function AuthPage() {
       }
       navigate('/')
     } catch (e) {
-      setError(e.message?.replace('Firebase: ', '').replace(/\(auth.*\)/, '') || 'An error occurred')
+      setError(e.message || e.code || JSON.stringify(e))
     }
     setLoading(false)
   }

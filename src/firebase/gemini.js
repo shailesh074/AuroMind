@@ -21,7 +21,7 @@ export async function sendMessageToGemini(userMessage, conversationHistory = [],
       'X-Title': 'AuroMind'
     },
     body: JSON.stringify({
-      model: 'meta-llama/llama-3.3-70b-instruct:free',
+      model: 'openrouter/free',
       messages,
       max_tokens: 1024,
       temperature: 0.8

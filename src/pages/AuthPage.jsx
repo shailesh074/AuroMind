@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { useNavigate, Link } from 'react-router-dom'
 
 export default function AuthPage() {
-  const [mode, setMode] = useState('signin')
+  const [mode, setMode] = useState('signin') // signin | signup
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -36,7 +36,7 @@ export default function AuthPage() {
       }
       navigate('/')
     } catch (e) {
-      setError(e.message || e.code || JSON.stringify(e))
+      setError(e.message?.replace('Firebase: ', '').replace(/\(auth.*\)/, '') || 'An error occurred')
     }
     setLoading(false)
   }
@@ -47,26 +47,33 @@ export default function AuthPage() {
       padding: '1rem', position: 'relative', zIndex: 1
     }}>
       <div style={{ width: '100%', maxWidth: '420px' }}>
+        {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <div style={{
+          <div style={{ 
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             width: '64px', height: '64px', borderRadius: '50%',
             border: '1px solid var(--gold-border)',
             background: 'var(--gold-glow)',
-            marginBottom: '1rem', fontSize: '1.8rem'
-          }}>🪷</div>
+            marginBottom: '1rem',
+            fontSize: '1.8rem'
+          }}>
+            🪷
+          </div>
           <h1 className="shimmer-text" style={{
-            fontFamily: 'var(--font-display)', fontSize: '2rem', letterSpacing: '0.25em', fontWeight: 600
+            fontFamily: 'var(--font-display)', fontSize: '2rem', letterSpacing: '0.25em',
+            fontWeight: 600
           }}>AUROMIND</h1>
           <p style={{ color: 'var(--white-dim)', fontFamily: 'var(--font-body)', fontSize: '1rem', marginTop: '0.4rem', fontStyle: 'italic' }}>
             Light on the Path
           </p>
         </div>
 
+        {/* Card */}
         <div className="glass" style={{
           borderRadius: 'var(--radius-lg)', padding: '2rem',
           boxShadow: '0 0 60px rgba(212,175,55,0.05), 0 20px 60px rgba(0,0,0,0.5)'
         }}>
+          {/* Tabs */}
           <div style={{ display: 'flex', marginBottom: '1.5rem', gap: '0.5rem' }}>
             {['signin', 'signup'].map(m => (
               <button key={m} onClick={() => { setMode(m); setError('') }} style={{
@@ -84,13 +91,22 @@ export default function AuthPage() {
 
           <form onSubmit={handleEmail} style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
             {mode === 'signup' && (
-              <input type="text" placeholder="Your name" value={name}
-                onChange={e => setName(e.target.value)} required style={inputStyle} />
+              <input
+                type="text" placeholder="Your name" value={name}
+                onChange={e => setName(e.target.value)} required
+                style={inputStyle}
+              />
             )}
-            <input type="email" placeholder="Email address" value={email}
-              onChange={e => setEmail(e.target.value)} required style={inputStyle} />
-            <input type="password" placeholder="Password" value={password}
-              onChange={e => setPassword(e.target.value)} required minLength={6} style={inputStyle} />
+            <input
+              type="email" placeholder="Email address" value={email}
+              onChange={e => setEmail(e.target.value)} required
+              style={inputStyle}
+            />
+            <input
+              type="password" placeholder="Password" value={password}
+              onChange={e => setPassword(e.target.value)} required minLength={6}
+              style={inputStyle}
+            />
 
             {error && (
               <p style={{ color: '#ff7070', fontSize: '0.8rem', fontFamily: 'var(--font-ui)', textAlign: 'center' }}>
@@ -104,7 +120,8 @@ export default function AuthPage() {
               background: 'linear-gradient(135deg, rgba(212,175,55,0.2), rgba(212,175,55,0.05))',
               color: 'var(--gold-light)', cursor: loading ? 'not-allowed' : 'pointer',
               fontFamily: 'var(--font-display)', fontSize: '0.85rem', letterSpacing: '0.15em',
-              transition: 'all 0.3s ease', opacity: loading ? 0.6 : 1, marginTop: '0.5rem'
+              transition: 'all 0.3s ease', opacity: loading ? 0.6 : 1,
+              marginTop: '0.5rem'
             }}>
               {loading ? 'ONE MOMENT...' : (mode === 'signin' ? 'ENTER THE PATH' : 'BEGIN THE JOURNEY')}
             </button>
@@ -150,8 +167,14 @@ export default function AuthPage() {
 }
 
 const inputStyle = {
-  padding: '0.75rem 1rem', borderRadius: 'var(--radius-sm)',
-  border: '1px solid var(--gold-border)', background: 'rgba(255,255,255,0.04)',
-  color: 'var(--white-soft)', fontFamily: 'var(--font-ui)', fontSize: '0.9rem',
-  outline: 'none', transition: 'border-color 0.3s ease', width: '100%'
+  padding: '0.75rem 1rem',
+  borderRadius: 'var(--radius-sm)',
+  border: '1px solid var(--gold-border)',
+  background: 'rgba(255,255,255,0.04)',
+  color: 'var(--white-soft)',
+  fontFamily: 'var(--font-ui)',
+  fontSize: '0.9rem',
+  outline: 'none',
+  transition: 'border-color 0.3s ease',
+  width: '100%'
 }

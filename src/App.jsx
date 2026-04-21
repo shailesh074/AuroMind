@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import ChatPage from './pages/ChatPage'
 import AboutPage from './pages/AboutPage'
 import AuthPage from './pages/AuthPage'
+import MotherPage from './pages/MotherPage'
 import ParticleBackground from './components/ParticleBackground'
 
 function AppRoutes() {
@@ -28,6 +29,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={user ? <ChatPage /> : <Navigate to="/auth" />} />
       <Route path="/about" element={<AboutPage />} />
+      <Route path="/mother" element={<MotherPage />} />
       <Route path="/auth" element={user ? <Navigate to="/" /> : <AuthPage />} />
     </Routes>
   )

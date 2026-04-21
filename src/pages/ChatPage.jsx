@@ -5,9 +5,10 @@ import { useChat } from '../hooks/useChat'
 
 export default function ChatPage() {
   const { user, logout } = useAuth()
-  const { messages, sessions, currentSession, loading, sendMessage, startNewSession, loadSession } = useChat(user)
+  const { messages, sessions, currentSession, loading, sendMessage, startNewSession, loadSession, deleteSession } = useChat(user)
   const [input, setInput] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768)
+  const [deletingId, setDeletingId] = useState(null)
   const messagesEndRef = useRef(null)
   const textareaRef = useRef(null)
 
@@ -34,6 +35,13 @@ export default function ChatPage() {
     setInput(e.target.value)
     e.target.style.height = 'auto'
     e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px'
+  }
+
+  const handleDelete = async (e, sessionId) => {
+    e.stopPropagation()
+    setDeletingId(sessionId)
+    await deleteSession(sessionId)
+    setDeletingId(null)
   }
 
   const showWelcome = messages.length === 0 && !loading
@@ -85,23 +93,52 @@ export default function ChatPage() {
               Your conversations will appear here
             </p>
           ) : sessions.map(session => (
-            <button key={session.id} onClick={() => loadSession(session.id)} style={{
-              width: '100%', padding: '0.65rem 0.75rem', borderRadius: 'var(--radius-sm)',
-              border: 'none', textAlign: 'left', cursor: 'pointer',
+            <div key={session.id} style={{
+              display: 'flex', alignItems: 'center', gap: '0.3rem',
+              marginBottom: '2px', borderRadius: 'var(--radius-sm)',
               background: currentSession === session.id ? 'rgba(212,175,55,0.1)' : 'transparent',
-              color: currentSession === session.id ? 'var(--gold-light)' : 'var(--white-dim)',
-              fontFamily: 'var(--font-ui)', fontSize: '0.8rem',
-              marginBottom: '2px', transition: 'all 0.2s ease',
               borderLeft: currentSession === session.id ? '2px solid var(--gold-primary)' : '2px solid transparent',
-              overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis'
+              transition: 'all 0.2s ease',
             }}>
-              {session.title || 'Conversation'}
-            </button>
+              <button onClick={() => loadSession(session.id)} style={{
+                flex: 1, padding: '0.65rem 0.5rem', border: 'none', textAlign: 'left',
+                cursor: 'pointer', background: 'transparent',
+                color: currentSession === session.id ? 'var(--gold-light)' : 'var(--white-dim)',
+                fontFamily: 'var(--font-ui)', fontSize: '0.8rem',
+                overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis'
+              }}>
+                {session.title || 'Conversation'}
+              </button>
+              {/* Delete button */}
+              <button
+                onClick={(e) => handleDelete(e, session.id)}
+                disabled={deletingId === session.id}
+                title="Delete conversation"
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--white-faint)', padding: '0.4rem 0.5rem',
+                  fontSize: '0.8rem', flexShrink: 0, borderRadius: '4px',
+                  transition: 'all 0.2s ease', opacity: deletingId === session.id ? 0.4 : 1,
+                }}
+                onMouseEnter={e => e.target.style.color = '#ff6b6b'}
+                onMouseLeave={e => e.target.style.color = 'var(--white-faint)'}
+              >
+                {deletingId === session.id ? '...' : '🗑'}
+              </button>
+            </div>
           ))}
         </div>
 
-        {/* Bottom: user info + links */}
+        {/* Bottom links */}
         <div style={{ padding: '0.8rem', borderTop: '1px solid var(--gold-border)', flexShrink: 0 }}>
+          <Link to="/mother" style={{
+            display: 'block', padding: '0.5rem 0.75rem', color: 'var(--gold-dim)',
+            fontFamily: 'var(--font-ui)', fontSize: '0.75rem', textDecoration: 'none',
+            borderRadius: 'var(--radius-sm)', transition: 'color 0.2s ease',
+            letterSpacing: '0.05em', marginBottom: '0.2rem'
+          }}>
+            🌸 The Mother's Blessings
+          </Link>
           <Link to="/about" style={{
             display: 'block', padding: '0.5rem 0.75rem', color: 'var(--white-dim)',
             fontFamily: 'var(--font-ui)', fontSize: '0.75rem', textDecoration: 'none',
@@ -125,9 +162,7 @@ export default function ChatPage() {
               background: 'none', border: 'none', cursor: 'pointer', color: 'var(--white-faint)',
               fontSize: '0.7rem', fontFamily: 'var(--font-ui)', padding: '0.2rem',
               transition: 'color 0.2s ease'
-            }} title="Sign out">
-              ⏻
-            </button>
+            }} title="Sign out">⏻</button>
           </div>
         </div>
       </aside>
@@ -149,9 +184,7 @@ export default function ChatPage() {
             background: 'none', border: '1px solid var(--gold-border)', cursor: 'pointer',
             color: 'var(--gold-primary)', padding: '0.4rem 0.6rem', borderRadius: '6px',
             fontSize: '0.9rem', transition: 'all 0.2s ease'
-          }}>
-            ☰
-          </button>
+          }}>☰</button>
           <div style={{ flex: 1 }}>
             <span style={{ color: 'var(--gold-dim)', fontFamily: 'var(--font-body)', fontSize: '0.9rem', fontStyle: 'italic' }}>
               🪷 In the light of Sri Aurobindo & The Mother
@@ -162,9 +195,7 @@ export default function ChatPage() {
             color: 'var(--gold-primary)', padding: '0.4rem 0.8rem', borderRadius: '6px',
             fontFamily: 'var(--font-ui)', fontSize: '0.75rem', letterSpacing: '0.08em',
             transition: 'all 0.2s ease'
-          }}>
-            + New
-          </button>
+          }}>+ New</button>
         </header>
 
         {/* Messages */}
@@ -211,7 +242,6 @@ export default function ChatPage() {
                 flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
                 animation: 'fadeInUp 0.4s ease'
               }}>
-                {/* Avatar */}
                 <div style={{
                   width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -220,10 +250,9 @@ export default function ChatPage() {
                 }}>
                   {msg.role === 'user' ? '🙏' : '🪷'}
                 </div>
-
-                {/* Bubble */}
                 <div style={{
-                  maxWidth: '78%', padding: '0.9rem 1.1rem', borderRadius: msg.role === 'user' ? '18px 4px 18px 18px' : '4px 18px 18px 18px',
+                  maxWidth: '78%', padding: '0.9rem 1.1rem',
+                  borderRadius: msg.role === 'user' ? '18px 4px 18px 18px' : '4px 18px 18px 18px',
                   background: msg.role === 'user'
                     ? 'linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.05))'
                     : 'rgba(255,255,255,0.03)',
@@ -246,7 +275,7 @@ export default function ChatPage() {
               </div>
             ))}
 
-            {/* Loading indicator */}
+            {/* Loading */}
             {loading && (
               <div style={{ display: 'flex', gap: '0.8rem', marginBottom: '1.5rem', animation: 'fadeInUp 0.3s ease' }}>
                 <div style={{ width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(212,175,55,0.08)', border: '1px solid var(--gold-border)', fontSize: '1rem' }}>
@@ -264,12 +293,11 @@ export default function ChatPage() {
                 </div>
               </div>
             )}
-
             <div ref={messagesEndRef} />
           </div>
         </div>
 
-        {/* Input area */}
+        {/* Input */}
         <div style={{
           padding: '1rem', borderTop: '1px solid rgba(212,175,55,0.1)',
           background: 'rgba(5,5,8,0.8)', backdropFilter: 'blur(20px)', flexShrink: 0
@@ -292,8 +320,7 @@ export default function ChatPage() {
                   flex: 1, background: 'none', border: 'none', outline: 'none', resize: 'none',
                   color: 'var(--white-soft)', fontFamily: 'var(--font-body)',
                   fontSize: 'clamp(0.95rem, 2vw, 1.05rem)', lineHeight: 1.6,
-                  maxHeight: '160px', overflow: 'auto',
-                  '::placeholder': { color: 'var(--white-dim)' }
+                  maxHeight: '160px', overflow: 'auto'
                 }}
               />
               <button onClick={handleSend} disabled={!input.trim() || loading} style={{
@@ -305,12 +332,10 @@ export default function ChatPage() {
                 color: input.trim() && !loading ? '#000' : 'var(--white-dim)',
                 fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'all 0.3s ease'
-              }}>
-                ↑
-              </button>
+              }}>↑</button>
             </div>
             <p style={{ textAlign: 'center', color: 'var(--white-faint)', fontFamily: 'var(--font-ui)', fontSize: '0.68rem', marginTop: '0.5rem', letterSpacing: '0.05em' }}>
-              Rooted in the teachings of Sri Aurobindo & The Mother • Enter to send, Shift+Enter for new line
+              Rooted in the teachings of Sri Aurobindo & The Mother • Enter to send
             </p>
           </div>
         </div>

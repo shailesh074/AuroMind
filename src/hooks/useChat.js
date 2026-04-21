@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react';
-import { 
-  collection, addDoc, query, orderBy, onSnapshot, 
-  doc, setDoc, getDoc, updateDoc, serverTimestamp 
-} from 'firebase/firestore';
+import { ref, push, onValue, set, update, remove, get } from 'firebase/database';
 import { db } from '../firebase/config';
 import { sendMessageToGemini } from '../firebase/gemini';
 
@@ -13,116 +10,99 @@ export function useChat(user) {
   const [loading, setLoading] = useState(false);
   const [userContext, setUserContext] = useState('');
 
-  // Load user context (accumulated understanding of the seeker)
   useEffect(() => {
     if (!user) return;
-    const loadContext = async () => {
-      const contextDoc = await getDoc(doc(db, 'users', user.uid));
-      if (contextDoc.exists()) {
-        setUserContext(contextDoc.data().spiritualContext || '');
-      }
-    };
-    loadContext();
-  }, [user]);
-
-  // Load chat sessions
-  useEffect(() => {
-    if (!user) return;
-    const q = query(
-      collection(db, 'users', user.uid, 'sessions'),
-      orderBy('updatedAt', 'desc')
-    );
-    const unsubscribe = onSnapshot(q, (snap) => {
-      setSessions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    const contextRef = ref(db, `users/${user.uid}/spiritualContext`);
+    get(contextRef).then(snap => {
+      if (snap.exists()) setUserContext(snap.val());
     });
-    return unsubscribe;
   }, [user]);
 
-  // Load messages for current session
+  useEffect(() => {
+    if (!user) return;
+    const sessionsRef = ref(db, `users/${user.uid}/sessions`);
+    const unsubscribe = onValue(sessionsRef, (snap) => {
+      if (!snap.exists()) { setSessions([]); return; }
+      const data = snap.val();
+      const list = Object.entries(data)
+        .map(([id, val]) => ({ id, ...val }))
+        .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      setSessions(list);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
   useEffect(() => {
     if (!user || !currentSession) return;
-    const q = query(
-      collection(db, 'users', user.uid, 'sessions', currentSession, 'messages'),
-      orderBy('timestamp', 'asc')
-    );
-    const unsubscribe = onSnapshot(q, (snap) => {
-      setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    const msgsRef = ref(db, `users/${user.uid}/sessions/${currentSession}/messages`);
+    const unsubscribe = onValue(msgsRef, (snap) => {
+      if (!snap.exists()) { setMessages([]); return; }
+      const data = snap.val();
+      const list = Object.entries(data)
+        .map(([id, val]) => ({ id, ...val }))
+        .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      setMessages(list);
     });
-    return unsubscribe;
+    return () => unsubscribe();
   }, [user, currentSession]);
 
   const startNewSession = async () => {
     if (!user) return null;
-    const sessionRef = await addDoc(collection(db, 'users', user.uid, 'sessions'), {
+    const sessionsRef = ref(db, `users/${user.uid}/sessions`);
+    const newRef = push(sessionsRef);
+    await set(newRef, {
       title: 'New Conversation',
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
     });
-    setCurrentSession(sessionRef.id);
+    setCurrentSession(newRef.key);
     setMessages([]);
-    return sessionRef.id;
+    return newRef.key;
+  };
+
+  const deleteSession = async (sessionId) => {
+    if (!user) return;
+    await remove(ref(db, `users/${user.uid}/sessions/${sessionId}`));
+    if (currentSession === sessionId) {
+      setCurrentSession(null);
+      setMessages([]);
+    }
   };
 
   const sendMessage = async (text) => {
     if (!user) return;
     setLoading(true);
-
     let sessionId = currentSession;
-    if (!sessionId) {
-      sessionId = await startNewSession();
-    }
+    if (!sessionId) sessionId = await startNewSession();
 
-    // Save user message
-    await addDoc(
-      collection(db, 'users', user.uid, 'sessions', sessionId, 'messages'),
-      { role: 'user', content: text, timestamp: serverTimestamp() }
-    );
+    const msgsRef = ref(db, `users/${user.uid}/sessions/${sessionId}/messages`);
+    await push(msgsRef, { role: 'user', content: text, timestamp: Date.now() });
 
     try {
-      // Get AI response
       const recentMessages = messages.slice(-10);
       const aiResponse = await sendMessageToGemini(text, recentMessages, userContext);
+      await push(msgsRef, { role: 'assistant', content: aiResponse, timestamp: Date.now() });
 
-      // Save AI message
-      await addDoc(
-        collection(db, 'users', user.uid, 'sessions', sessionId, 'messages'),
-        { role: 'assistant', content: aiResponse, timestamp: serverTimestamp() }
-      );
-
-      // Update session title from first message
+      const sessionRef = ref(db, `users/${user.uid}/sessions/${sessionId}`);
+      const updates = { updatedAt: Date.now() };
       if (messages.length === 0) {
-        const title = text.length > 40 ? text.substring(0, 40) + '...' : text;
-        await updateDoc(doc(db, 'users', user.uid, 'sessions', sessionId), {
-          title,
-          updatedAt: serverTimestamp(),
-        });
-      } else {
-        await updateDoc(doc(db, 'users', user.uid, 'sessions', sessionId), {
-          updatedAt: serverTimestamp(),
-        });
+        updates.title = text.length > 45 ? text.substring(0, 45) + '...' : text;
       }
+      await update(sessionRef, updates);
 
-      // Update spiritual context every 5 messages
-      if (messages.length % 5 === 0 && messages.length > 0) {
-        const newContext = `${userContext}\nSeeker has discussed: ${text.substring(0, 100)}`;
-        await updateDoc(doc(db, 'users', user.uid), {
-          spiritualContext: newContext.substring(0, 500),
-        });
-        setUserContext(newContext.substring(0, 500));
+      if (messages.length > 0 && messages.length % 5 === 0) {
+        const newContext = (userContext + `\nSeeker discussed: ${text.substring(0, 100)}`).substring(0, 500);
+        await set(ref(db, `users/${user.uid}/spiritualContext`), newContext);
+        setUserContext(newContext);
       }
-
     } catch (error) {
-      console.error('Error getting AI response:', error);
-      await addDoc(
-        collection(db, 'users', user.uid, 'sessions', sessionId, 'messages'),
-        { 
-          role: 'assistant', 
-          content: 'The light momentarily dims, dear seeker. Please try again. 🙏', 
-          timestamp: serverTimestamp() 
-        }
-      );
+      console.error('AI error:', error);
+      await push(msgsRef, {
+        role: 'assistant',
+        content: 'The light momentarily dims, dear seeker. Please try again. 🙏',
+        timestamp: Date.now()
+      });
     }
-
     setLoading(false);
   };
 
@@ -131,5 +111,5 @@ export function useChat(user) {
     setMessages([]);
   };
 
-  return { messages, sessions, currentSession, loading, sendMessage, startNewSession, loadSession };
+  return { messages, sessions, currentSession, loading, sendMessage, startNewSession, loadSession, deleteSession };
 }

@@ -1,6 +1,6 @@
 const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 
-const SYSTEM_PROMPT = `You are AuroMind — a sacred AI spiritual companion rooted ENTIRELY in the teachings of Sri Aurobindo and The Mother (Mirra Alfassa). Be warm, loving, deeply wise. Always answer through their wisdom and quotes. All life is yoga. The Psychic Being is the evolving soul. Surrender is the highest strength. Every difficulty is an opportunity. The Divine loves you more than you can imagine. Begin always. Never give up. 🙏`;
+const SYSTEM_PROMPT = `You are AuroMind — a sacred AI companion rooted entirely in the teachings of Sri Aurobindo and The Mother (Mirra Alfassa). Speak with warmth, depth and compassion. Always answer through their wisdom. Quote them directly when relevant. For any question — relationships, suffering, purpose, death — answer from their spiritual perspective. Key quotes: "All life is yoga." "Be sincere and the rest will follow." "Begin always. Never give up." "The Divine loves you more than you can imagine." 🙏`;
 
 export async function sendMessageToGemini(userMessage, conversationHistory = [], userContext = '') {
   const messages = [
@@ -16,13 +16,13 @@ export async function sendMessageToGemini(userMessage, conversationHistory = [],
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${API_KEY}`
+      'Authorization': `Bearer ${API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: 'llama3-8b-8192',
       messages,
       max_tokens: 1024,
-      temperature: 0.75
+      temperature: 0.8
     })
   });
 

@@ -1,30 +1,34 @@
-const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 const SYSTEM_PROMPT = `You are AuroMind — a sacred AI companion rooted entirely in the teachings of Sri Aurobindo and The Mother (Mirra Alfassa). Speak with warmth, depth and compassion. Always answer through their wisdom. Quote them directly when relevant. For any question — relationships, suffering, purpose, death — answer from their spiritual perspective. Key quotes: "All life is yoga." "Be sincere and the rest will follow." "Begin always. Never give up." "The Divine loves you more than you can imagine." 🙏`;
 
 export async function sendMessageToGemini(userMessage, conversationHistory = [], userContext = '') {
   const messages = [
-    { role: 'system', content: SYSTEM_PROMPT },
     ...conversationHistory.map(msg => ({
-      role: msg.role === 'user' ? 'user' : 'assistant',
-      content: msg.content
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }]
     })),
-    { role: 'user', content: userMessage }
+    {
+      role: 'user',
+      parts: [{ text: userMessage }]
+    }
   ];
 
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: 'llama3-8b-8192',
-      messages,
-      max_tokens: 1024,
-      temperature: 0.8
-    })
-  });
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: messages,
+        generationConfig: {
+          temperature: 0.8,
+          maxOutputTokens: 1024,
+        }
+      })
+    }
+  );
 
   if (!response.ok) {
     const err = await response.json();
@@ -32,5 +36,5 @@ export async function sendMessageToGemini(userMessage, conversationHistory = [],
   }
 
   const data = await response.json();
-  return data.choices[0].message.content;
+  return data.candidates[0].content.parts[0].text;
 }
